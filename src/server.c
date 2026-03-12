@@ -1,0 +1,82 @@
+/**
+ * @file server.c
+ * @author your name (Alessandro Giusti)
+ * @brief Server implementation for handling client connections and processing requests.
+ * @version 0.1
+ * @date 2024-06-01
+ * 
+ */
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include "server.h"
+
+
+int dns_server_init(dns_server_t *server, int port) {
+
+	memset(server, 0, sizeof(dns_server_t));
+	server->sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (server->sockfd < 0) {
+		perror("socket");
+		return -1;
+	}
+
+	int opt = 1;
+	if (setsockopt(server->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+		perror("setsockopt");
+		close(server->sockfd);
+		return -1;
+	}
+
+	server->bind_addr.sin_family = AF_INET;
+	server->bind_addr.sin_port = htons(port);
+	server->bind_addr.sin_addr.s_addr = INADDR_ANY;
+
+	if (bind(server->sockfd, (struct sockaddr *)&server->bind_addr, sizeof(server->bind_addr)) < 0) {
+		perror("bind");
+		close(server->sockfd);
+		return -1;
+	}
+
+	server->upstream_addr.sin_family = AF_INET;
+	server->upstream_addr.sin_port = htons(53); // Default DNS port
+	server->upstream_addr.sin_addr.s_addr = inet_addr("8.8.8.8"); // Google DNS
+
+	return 0; // Return 0 on success, -1 on failure
+}
+
+int dns_server_start(dns_server_t *server) {
+	// Start the server loop to accept and process client requests
+	uint8_t buffer[512];
+	dns_packet_t pkt;
+	struct sockaddr_in client_addr;
+
+	printf("DNS server listening on port %d...\n", ntohs(server->bind_addr.sin_port));
+	while (1) {
+		socklen_t addr_len = sizeof(client_addr);
+		ssize_t n = recvfrom(server->sockfd, buffer, sizeof(buffer), 0,
+							(struct sockaddr *)&client_addr, &addr_len);
+		
+		if (n < 0) {
+			perror("recvfrom");
+			continue;
+		}
+
+		if (dns_parse_packet(buffer, n, &pkt) < 0) {
+			fprintf(stderr, "Failed to parse DNS query\n");
+			continue;
+		}
+
+		dns_print_packet(&pkt);
+	}
+
+	return 0; // Return 0 on success, -1 on failure
+}
+
+void dns_server_stop(dns_server_t *server) {
+    if (server->sockfd > 0) {
+        close(server->sockfd);
+    }
+}
