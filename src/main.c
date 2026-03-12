@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include "dns.h"
+#include "server.h"
 
 uint8_t test_query[] = {
     /* header */
@@ -26,12 +27,26 @@ uint8_t test_query[] = {
     0x00, 0x01              /* QCLASS: IN */
 };
 
+// int main() {
+//     dns_packet_t pkt;
+//     if (dns_parse_packet(test_query, sizeof(test_query), &pkt) == 0) {
+//         dns_print_packet(&pkt);
+//     } else {
+//         fprintf(stderr, "Error parsing DNS packet\n");
+//     }
+//     return 0;
+// }
+
 int main() {
-    dns_packet_t pkt;
-    if (dns_parse_packet(test_query, sizeof(test_query), &pkt) == 0) {
-        dns_print_packet(&pkt);
+    dns_server_t server;
+    if (dns_server_init(&server, 53) == 0) {
+        printf("DNS server initialized on port 53\n");
+        dns_server_start(&server);
     } else {
-        fprintf(stderr, "Error parsing DNS packet\n");
+        fprintf(stderr, "Failed to initialize DNS server\n");
+        return 1;
     }
+
+    dns_server_stop(&server);
     return 0;
 }
