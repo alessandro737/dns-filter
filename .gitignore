@@ -1,0 +1,18 @@
+# Build output
+dns-filter
+*.o
+*.out
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug
+*.dSYM/
+core
