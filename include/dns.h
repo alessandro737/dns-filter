@@ -62,5 +62,11 @@ typedef struct{
 	size_t raw_len;
 } dns_packet_t;
 
+int dns_parse_packet(const uint8_t *buf, size_t len, dns_packet_t *pkt);
+int dns_parse_header(const uint8_t *buf, size_t len, dns_header_t *hdr);
+int dns_decode_name(const uint8_t *buf, size_t len, size_t offset,
+                    char *out, size_t out_size);
+void dns_print_packet(const dns_packet_t *pkt);
+
 #endif // DNS_H
 
