@@ -13,14 +13,14 @@
 #include <netinet/in.h>
 #include "dns.h"
 #include "blocklist.h"
-
-
+#include "cache.h"
 
 typedef struct {
 	int blocked;
 	int forwarded;
 	int total;
 	time_t start_time;
+	int cached;
 } dns_stats_t;
 
 typedef struct {
@@ -29,6 +29,7 @@ typedef struct {
 	struct sockaddr_in upstream_addr;
 	blocklist_t *blocklist; // Pointer to the blocklist for filtering queries
 	dns_stats_t stats; // Statistics for monitoring
+	dns_cache_t *cache; // Pointer to the DNS cache for storing responses
 } dns_server_t;
 
 int dns_server_init(dns_server_t *server, int port);

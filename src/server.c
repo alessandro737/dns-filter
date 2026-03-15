@@ -49,6 +49,9 @@ int dns_server_init(dns_server_t *server, int port) {
 	server->stats.blocked = 0;
 	server->stats.forwarded = 0;
 	server->stats.start_time = time(NULL);
+	server->stats.cached = 0;
+
+	server->cache = cache_init(131072); // Initialize DNS cache with 131072 buckets
 
 	return 0; // Return 0 on success, -1 on failure
 }
@@ -74,21 +77,41 @@ int dns_server_start(dns_server_t *server) {
 		}
 		server->stats.total++;
 		dns_print_packet(&pkt);
+
+		// Check cache
+		uint8_t cached_response[512];
+		size_t cached_response_len;
+		if (cache_get(server->cache, pkt.question.name, cached_response, &cached_response_len) == 0) {
+			printf("Cache hit for %s\n", pkt.question.name);
+			cached_response[0] = buffer[0]; // Copy ID from the original query
+			cached_response[1] = buffer[1]; // Copy flags from the original query
+			if (sendto(server->sockfd, cached_response, cached_response_len, 0,
+						(struct sockaddr *)&client_addr, addr_len) < 0) {
+				perror("sendto");
+			}
+			server->stats.forwarded++;
+			time_t uptime = time(NULL) - server->stats.start_time;
+			int qps = uptime > 0 ? server->stats.total / uptime : 0;
+			printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d | Uptime: %lds | QPS: %d\n",
+	   				server->stats.total, server->stats.blocked, server->stats.forwarded, uptime, qps);
+	   		continue;
+		}
 		
 		// Check blocklist
 		if (blocklist_contains(server->blocklist, pkt.question.name)) {
 			printf("Blocked query for %s\n", pkt.question.name);
-			server->stats.blocked++;
 			buffer[2] |= 0x80;
 			buffer[3] = (buffer[3] & 0xF0) | 3;
 			if (sendto(server->sockfd, buffer, n, 0,
 						(struct sockaddr *)&client_addr, addr_len) < 0) {
 				perror("sendto");
 			}
-
-			printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d\n",
-       				server->stats.total, server->stats.blocked, server->stats.forwarded);
-			continue;
+			server->stats.blocked++;
+			time_t uptime = time(NULL) - server->stats.start_time;
+			int qps = uptime > 0 ? server->stats.total / uptime : 0;
+			printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d | Uptime: %lds | QPS: %d\n",
+       				server->stats.total, server->stats.blocked, server->stats.forwarded, uptime, qps);
+	   		continue;
 		}
 
 		// Forward the query to the upstream DNS server and send the response back to the client
@@ -117,9 +140,15 @@ int dns_server_start(dns_server_t *server) {
 		if (sendto(server->sockfd, response, n, 0, (struct sockaddr *)&client_addr, addr_len) < 0) {
 			perror("sendto");
 		}
+		uint32_t ttl = dns_extract_ttl(response, n);
+		cache_add(server->cache, pkt.question.name, response, n, ttl);
+
+		server->stats.cached++;
 		server->stats.forwarded++;
-		printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d\n",
-	   			server->stats.total, server->stats.blocked, server->stats.forwarded);
+		time_t uptime = time(NULL) - server->stats.start_time;
+		int qps = uptime > 0 ? server->stats.total / uptime : 0;
+		printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d | Uptime: %lds | QPS: %d\n",
+	   			server->stats.total, server->stats.blocked, server->stats.forwarded, uptime, qps);
 		close(upstream_sock);
 
 

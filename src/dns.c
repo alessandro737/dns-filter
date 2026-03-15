@@ -131,3 +131,30 @@ void dns_print_packet(const dns_packet_t *pkt)
 		printf("  Class: %u\n", pkt->question.class_);
 	}
 }
+
+uint32_t dns_extract_ttl(const uint8_t *response, size_t len) {
+    if (len < DNS_HEADER_SIZE) return 300;
+
+    size_t offset = DNS_HEADER_SIZE;
+
+    // Skip questions
+    for (int i = 0; i < ntohs(*(uint16_t *)(response + 4)); i++) {
+        int name_len = dns_decode_name(response, len, offset, NULL, 0);
+        if (name_len < 0) return 300;
+        offset += name_len + 4;
+    }
+
+    // Skip answer name
+    if ((response[offset] & 0xC0) == 0xC0) {
+        offset += 2;
+    } else {
+        int name_len = dns_decode_name(response, len, offset, NULL, 0);
+        if (name_len < 0) return 300;
+        offset += name_len;
+    }
+
+    // Type(2) + Class(2) + TTL(4)
+    if (offset + 8 > len) return 300;
+
+    return ntohl(*(uint32_t *)(response + offset + 4));
+}
