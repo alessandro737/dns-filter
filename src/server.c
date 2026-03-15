@@ -70,6 +70,36 @@ int dns_server_start(dns_server_t *server) {
 		}
 
 		dns_print_packet(&pkt);
+
+		// TODO: Forward the query to the upstream DNS server and send the response back to the client
+		int upstream_sock = socket(AF_INET, SOCK_DGRAM, 0);
+		
+		if (upstream_sock < 0) {
+			perror("socket");
+			continue;
+		}
+		struct timeval tv = {2, 0}; // 2 seconds
+		setsockopt(upstream_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+		if (sendto(upstream_sock, buffer, n, 0, (struct sockaddr *)&server->upstream_addr, sizeof(server->upstream_addr)) < 0) {
+			perror("sendto");
+			close(upstream_sock);
+			continue;
+		}
+
+		uint8_t response[512];
+		n = recvfrom(upstream_sock, response, sizeof(response), 0, NULL, NULL);
+		if (n < 0) {
+			perror("recvfrom");
+			close(upstream_sock);
+			continue;
+		}
+		if (sendto(server->sockfd, response, n, 0, (struct sockaddr *)&client_addr, addr_len) < 0) {
+			perror("sendto");
+		}
+		close(upstream_sock);
+
+
 	}
 
 	return 0; // Return 0 on success, -1 on failure
@@ -80,3 +110,5 @@ void dns_server_stop(dns_server_t *server) {
         close(server->sockfd);
     }
 }
+
+
