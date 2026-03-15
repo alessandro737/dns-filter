@@ -11,15 +11,20 @@
 
 #include <netinet/in.h>
 #include "dns.h"
+#include "blocklist.h"
+
 
 typedef struct {
 	int sockfd;
 	struct sockaddr_in bind_addr;
 	struct sockaddr_in upstream_addr;
+	struct blocklist *blocklist; // Pointer to the blocklist for filtering queries
 } dns_server_t;
 
 int dns_server_init(dns_server_t *server, int port);
 int dns_server_start(dns_server_t *server);
 void dns_server_stop(dns_server_t *server);
+
+
 
 #endif /* SERVER_H */

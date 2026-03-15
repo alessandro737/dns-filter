@@ -1,9 +1,7 @@
 /**
- * @file server.c
- * @author your name (Alessandro Giusti)
- * @brief Server implementation for handling client connections and processing requests.
- * @version 0.1
- * @date 2024-06-01
+ * server.c
+ * Alessandro Giusti
+ * Server implementation for handling client connections and processing requests.
  * 
  */
 #include <stdio.h>
@@ -33,6 +31,9 @@ int dns_server_init(dns_server_t *server, int port) {
 	server->bind_addr.sin_family = AF_INET;
 	server->bind_addr.sin_port = htons(port);
 	server->bind_addr.sin_addr.s_addr = INADDR_ANY;
+	server->blocklist = blocklist_init(1024); // Initialize blocklist with 1024 buckets
+	blocklist_load_from_file(server->blocklist, "blocklist.txt"); // Load blocklist from file
+
 
 	if (bind(server->sockfd, (struct sockaddr *)&server->bind_addr, sizeof(server->bind_addr)) < 0) {
 		perror("bind");
@@ -70,8 +71,20 @@ int dns_server_start(dns_server_t *server) {
 		}
 
 		dns_print_packet(&pkt);
+		
+		// Check blocklist
+		if (blocklist_contains(server->blocklist, pkt.questions[0].qname)) {
+			printf("Blocked query for %s\n", pkt.questions[0].qname);
+			buffer[2] |= 0x80;
+			buffer[3] = (buffer[3] & 0xF0) | 3;
+			if (sendto(server->sockfd, buffer, n, 0,
+						(struct sockaddr *)&client_addr, addr_len) < 0) {
+				perror("sendto");
+			}
+			continue;
+		}
 
-		// TODO: Forward the query to the upstream DNS server and send the response back to the client
+		// Forward the query to the upstream DNS server and send the response back to the client
 		int upstream_sock = socket(AF_INET, SOCK_DGRAM, 0);
 		
 		if (upstream_sock < 0) {
@@ -110,5 +123,6 @@ void dns_server_stop(dns_server_t *server) {
         close(server->sockfd);
     }
 }
+
 
 
