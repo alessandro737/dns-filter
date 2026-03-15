@@ -18,7 +18,7 @@ typedef struct {
 	int sockfd;
 	struct sockaddr_in bind_addr;
 	struct sockaddr_in upstream_addr;
-	struct blocklist *blocklist; // Pointer to the blocklist for filtering queries
+	struct blocklist_t *blocklist; // Pointer to the blocklist for filtering queries
 } dns_server_t;
 
 int dns_server_init(dns_server_t *server, int port);

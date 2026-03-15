@@ -73,8 +73,8 @@ int dns_server_start(dns_server_t *server) {
 		dns_print_packet(&pkt);
 		
 		// Check blocklist
-		if (blocklist_contains(server->blocklist, pkt.questions[0].qname)) {
-			printf("Blocked query for %s\n", pkt.questions[0].qname);
+		if (blocklist_contains(server->blocklist, pkt.question.qname)) {
+			printf("Blocked query for %s\n", pkt.question.qname);
 			buffer[2] |= 0x80;
 			buffer[3] = (buffer[3] & 0xF0) | 3;
 			if (sendto(server->sockfd, buffer, n, 0,
