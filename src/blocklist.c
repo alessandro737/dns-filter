@@ -116,7 +116,7 @@ void blocklist_load_from_file(blocklist_t *blocklist, const char *filename) {
 	while (fgets(line, sizeof(line), file)) {
 		// Remove newline character
 		line[strcspn(line, "\r\n")] = 0;
-		if (strlen(line) > 0) {
+		if (strlen(line) > 0 && line[0] != '#') { // Ignore empty lines and comments
 			blocklist_add(blocklist, line);
 		}
 	}

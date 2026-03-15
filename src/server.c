@@ -31,7 +31,7 @@ int dns_server_init(dns_server_t *server, int port) {
 	server->bind_addr.sin_family = AF_INET;
 	server->bind_addr.sin_port = htons(port);
 	server->bind_addr.sin_addr.s_addr = INADDR_ANY;
-	server->blocklist = blocklist_init(1024); // Initialize blocklist with 1024 buckets
+	server->blocklist = blocklist_init(131072); // Initialize blocklist with 131072 buckets
 	blocklist_load_from_file(server->blocklist, "blocklist.txt"); // Load blocklist from file
 
 
