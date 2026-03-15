@@ -45,6 +45,11 @@ int dns_server_init(dns_server_t *server, int port) {
 	server->upstream_addr.sin_port = htons(53); // Default DNS port
 	server->upstream_addr.sin_addr.s_addr = inet_addr("8.8.8.8"); // Google DNS
 
+	server->stats.total = 0;
+	server->stats.blocked = 0;
+	server->stats.forwarded = 0;
+	server->stats.start_time = time(NULL);
+
 	return 0; // Return 0 on success, -1 on failure
 }
 
@@ -59,28 +64,30 @@ int dns_server_start(dns_server_t *server) {
 		socklen_t addr_len = sizeof(client_addr);
 		ssize_t n = recvfrom(server->sockfd, buffer, sizeof(buffer), 0,
 							(struct sockaddr *)&client_addr, &addr_len);
-		
 		if (n < 0) {
 			perror("recvfrom");
 			continue;
 		}
-
 		if (dns_parse_packet(buffer, n, &pkt) < 0) {
 			fprintf(stderr, "Failed to parse DNS query\n");
 			continue;
 		}
-
+		server->stats.total++;
 		dns_print_packet(&pkt);
 		
 		// Check blocklist
 		if (blocklist_contains(server->blocklist, pkt.question.name)) {
 			printf("Blocked query for %s\n", pkt.question.name);
+			server->stats.blocked++;
 			buffer[2] |= 0x80;
 			buffer[3] = (buffer[3] & 0xF0) | 3;
 			if (sendto(server->sockfd, buffer, n, 0,
 						(struct sockaddr *)&client_addr, addr_len) < 0) {
 				perror("sendto");
 			}
+
+			printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d\n",
+       				server->stats.total, server->stats.blocked, server->stats.forwarded);
 			continue;
 		}
 
@@ -110,6 +117,9 @@ int dns_server_start(dns_server_t *server) {
 		if (sendto(server->sockfd, response, n, 0, (struct sockaddr *)&client_addr, addr_len) < 0) {
 			perror("sendto");
 		}
+		server->stats.forwarded++;
+		printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d\n",
+	   			server->stats.total, server->stats.blocked, server->stats.forwarded);
 		close(upstream_sock);
 
 

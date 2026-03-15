@@ -9,16 +9,26 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <time.h>
 #include <netinet/in.h>
 #include "dns.h"
 #include "blocklist.h"
 
+
+
+typedef struct {
+	int blocked;
+	int forwarded;
+	int total;
+	time_t start_time;
+} dns_stats_t;
 
 typedef struct {
 	int sockfd;
 	struct sockaddr_in bind_addr;
 	struct sockaddr_in upstream_addr;
 	blocklist_t *blocklist; // Pointer to the blocklist for filtering queries
+	dns_stats_t stats; // Statistics for monitoring
 } dns_server_t;
 
 int dns_server_init(dns_server_t *server, int port);
