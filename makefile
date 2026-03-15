@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Iinclude
-SRC = src/main.c src/dns.c src/server.c src/blocklist.c
+SRC = src/main.c src/dns.c src/server.c src/blocklist.c src/cache.c
 OUT = dns-filter
 
 all:

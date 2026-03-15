@@ -90,9 +90,9 @@ int dns_server_start(dns_server_t *server) {
 				perror("sendto");
 			}
 			server->stats.forwarded++;
-			time_t uptime = time(NULL) - server->stats.start_time;
+			long long uptime = (long long)(time(NULL) - server->stats.start_time);			
 			int qps = uptime > 0 ? server->stats.total / uptime : 0;
-			printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d | Uptime: %lds | QPS: %d\n",
+			printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d | Uptime: %llds | QPS: %d\n",
 	   				server->stats.total, server->stats.blocked, server->stats.forwarded, uptime, qps);
 	   		continue;
 		}
@@ -107,9 +107,9 @@ int dns_server_start(dns_server_t *server) {
 				perror("sendto");
 			}
 			server->stats.blocked++;
-			time_t uptime = time(NULL) - server->stats.start_time;
+			long long uptime = (long long)(time(NULL) - server->stats.start_time);			
 			int qps = uptime > 0 ? server->stats.total / uptime : 0;
-			printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d | Uptime: %lds | QPS: %d\n",
+			printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d | Uptime: %llds | QPS: %d\n",
        				server->stats.total, server->stats.blocked, server->stats.forwarded, uptime, qps);
 	   		continue;
 		}
@@ -145,9 +145,9 @@ int dns_server_start(dns_server_t *server) {
 
 		server->stats.cached++;
 		server->stats.forwarded++;
-		time_t uptime = time(NULL) - server->stats.start_time;
+		long long uptime = (long long)(time(NULL) - server->stats.start_time);		
 		int qps = uptime > 0 ? server->stats.total / uptime : 0;
-		printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d | Uptime: %lds | QPS: %d\n",
+		printf("[Stats] Total: %d | Blocked: %d | Forwarded: %d | Uptime: %llds | QPS: %d\n",
 	   			server->stats.total, server->stats.blocked, server->stats.forwarded, uptime, qps);
 		close(upstream_sock);
 
